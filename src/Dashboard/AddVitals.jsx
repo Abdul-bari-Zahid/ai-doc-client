@@ -19,7 +19,7 @@ function AddVitals() {
 
     setLoading(true);
     try {
-      const res = await axios.post("http://localhost:5000/api/vitals/add", form);
+      const res = await axios.post("https://ai-doc-ser.vercel.app/api/vitals/add", form);
       setAiResult(res.data.vitals.aiResult);
       toast.success("✅ Vitals saved & AI result generated");
     } catch (err) {

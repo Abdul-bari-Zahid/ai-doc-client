@@ -18,7 +18,7 @@ function ReportDetail() {
   const fetchReport = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(`http://localhost:5000/api/reports/${id}`, {
+      const res = await axios.get(`https://ai-doc-ser.vercel.app/api/reports/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setReport(res.data);

@@ -17,12 +17,12 @@ function Timeline() {
       const token = localStorage.getItem("token");
 
       // Fetch Vitals
-      const vitalsRes = await axios.get("http://localhost:5000/api/vitals", {
+      const vitalsRes = await axios.get("https://ai-doc-ser.vercel.app/api/vitals", {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       // Fetch Reports
-      const reportsRes = await axios.get("http://localhost:5000/api/reports/user", {
+      const reportsRes = await axios.get("https://ai-doc-ser.vercel.app/api/reports/user", {
         headers: { Authorization: `Bearer ${token}` }
       });
 
