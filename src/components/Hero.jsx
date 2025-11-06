@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { motion } from "framer-motion";
-import heroImg from "./heroimg.jpg"
+import heroImg from "./heroImg.jpg"
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useEffect } from 'react';
