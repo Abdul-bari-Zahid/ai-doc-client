@@ -18,10 +18,7 @@ function ViewReport() {
   const fetchReports = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      const res = await API.get("/reports/user", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await API.get("/reports/user");
       setReports(res.data);
     } catch (err) {
       console.error(err);

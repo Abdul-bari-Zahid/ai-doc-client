@@ -14,17 +14,11 @@ function Timeline() {
   const fetchTimeline = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-
       // Fetch Vitals
-      const vitalsRes = await API.get("/vitals", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const vitalsRes = await API.get("/vitals");
 
       // Fetch Reports
-      const reportsRes = await API.get("/reports/user", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const reportsRes = await API.get("/reports/user");
 
       // Combine data
       const vitalsTimeline = vitalsRes.data.map(v => ({

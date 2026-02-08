@@ -24,13 +24,9 @@ function UploadReport() {
     formData.append("reportDate", reportDate);
     formData.append("reportType", reportType);
 
-    const token = localStorage.getItem("token");
-
-    setLoading(true);
     try {
       const res = await API.post("/reports/upload", formData, {
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
         },
       });
