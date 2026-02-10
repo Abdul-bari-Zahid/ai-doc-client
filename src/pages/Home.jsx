@@ -18,7 +18,7 @@ function Home() {
       <Testimonials />
       <CTA />
       <Security />
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }
