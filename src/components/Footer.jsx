@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Github, Twitter, Linkedin, Mail } from "lucide-react";
-import logo from '../../public/ai-doctor-assistant.png'
+
 
 function Footer() {
     const currentYear = new Date().getFullYear();
@@ -11,7 +11,7 @@ function Footer() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
                     <div className="col-span-1 md:col-span-1">
                         <Link to="/" className="flex items-center gap-3 mb-6">
-                            <img src={logo} alt="MediAI Logo" className="w-8 h-8 object-contain" />
+                            <img src="/ai-doctor-assistant.png" alt="MediAI Logo" className="w-8 h-8 object-contain" />
                             <span className="text-xl font-bold text-slate-900">MediAI</span>
                         </Link>
                         <p className="text-slate-500 mb-6 leading-relaxed">

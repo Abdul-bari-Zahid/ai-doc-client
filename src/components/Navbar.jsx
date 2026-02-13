@@ -2,8 +2,8 @@ import { Link } from "react-router-dom";
 import React from "react";
 import toast from "react-hot-toast";
 import { useEffect } from "react";
-import { Menu, X, ChevronDown, LayoutDashboard, FileUp, Clock, FileText, Activity, LogOut } from "lucide-react";
-import logo from '../../public/ai-doctor-assistant.png'
+import { Menu, X, ChevronDown, LayoutDashboard, Apple, FileUp, Clock, FileText, Activity, LogOut } from "lucide-react";
+
 
 function Navbar() {
   const [menuOpen, setMenuOpen] = React.useState(false);
@@ -45,7 +45,7 @@ function Navbar() {
           <Link to="/" className="flex items-center gap-2 group">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-teal-500 p-0.5 transition-transform group-hover:scale-105">
               <div className="w-full h-full bg-white rounded-[10px] flex items-center justify-center overflow-hidden">
-                <img src={logo} alt="MediAI Logo" className="w-8 h-8 object-contain" />
+                <img src="/ai-doctor-assistant.png" alt="MediAI Logo" className="w-8 h-8 object-contain" />
               </div>
             </div>
             <div className="flex flex-col">
@@ -94,6 +94,11 @@ function Navbar() {
                     <Link to="/uploadreport" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 rounded-xl text-slate-700 transition-colors">
                       <FileUp size={18} className="text-blue-500" />
                       <span className="text-sm font-medium">Upload Report</span>
+                    </Link>
+                    <div className="h-px bg-slate-100 my-1 mx-2"></div>
+                    <Link to="/diet-plans" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 rounded-xl text-slate-700 transition-colors">
+                      <Apple size={18} className="text-blue-500" />
+                      <span className="text-sm font-medium">Diet Journeys</span>
                     </Link>
                     <Link to="/timeline" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 rounded-xl text-slate-700 transition-colors">
                       <Clock size={18} className="text-blue-500" />

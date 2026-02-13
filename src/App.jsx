@@ -9,6 +9,8 @@ import UploadReport from "./Dashboard/UploadReport.jsx";
 import AddVitals from "./Dashboard/AddVitals.jsx";
 import ReportDetail from "./Dashboard/ReportDetails.jsx";
 import Timeline from "./Dashboard/Timeline.jsx";
+import DietPlans from "./Dashboard/DietPlans.jsx";
+import DietDetail from "./Dashboard/DietDetail.jsx";
 
 import ViewReport from "./Dashboard/ViewReport.jsx";
 import Protect from "./protected/Protect.jsx";
@@ -21,53 +23,69 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route 
-          path="/dashboard" 
+        <Route
+          path="/dashboard"
           element={
             <Protect>
               <Dashboard />
             </Protect>
-          } 
+          }
         />
-        <Route 
-          path="/uploadreport" 
+        <Route
+          path="/uploadreport"
           element={
             <Protect>
               <UploadReport />
             </Protect>
-          } 
+          }
         />
-        <Route 
-          path="/advitals" 
+        <Route
+          path="/advitals"
           element={
             <Protect>
               <AddVitals />
             </Protect>
-          } 
+          }
         />
-        <Route 
-          path="/viewReport" 
+        <Route
+          path="/viewReport"
           element={
             <Protect>
               <ViewReport />
             </Protect>
-          } 
+          }
         />
-        <Route 
-          path="/reports/:id" 
+        <Route
+          path="/reports/:id"
           element={
             <Protect>
               <ReportDetail />
             </Protect>
-          } 
+          }
         />
-        <Route 
-          path="/timeline" 
+        <Route
+          path="/timeline"
           element={
             <Protect>
               <Timeline />
             </Protect>
-          } 
+          }
+        />
+        <Route
+          path="/diet-plans"
+          element={
+            <Protect>
+              <DietPlans />
+            </Protect>
+          }
+        />
+        <Route
+          path="/diet/:id"
+          element={
+            <Protect>
+              <DietDetail />
+            </Protect>
+          }
         />
       </Routes>
 
