@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
-import { API } from "../api";
+import { API } from "../api.js";
 import toast from "react-hot-toast";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
