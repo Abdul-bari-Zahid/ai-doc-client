@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  --font-heading: 'Outfit', sans-serif;
+
+  --color-brand-primary: #0ea5e9;
+  --color-brand-primary-dark: #0284c7;
+  --color-brand-secondary: #14b8a6;
+  --color-brand-accent: #f59e0b;
+  --color-background: #ffffff;
+  --color-foreground: #0f172a;
+  --color-muted: #64748b;
+  --color-muted-foreground: #94a3b8;
+  --color-card: #ffffff;
+  --color-card-foreground: #0f172a;
+  --color-border: #e2e8f0;
+}
+
+body {
+  @apply font-sans text-foreground bg-background antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  @apply font-heading font-bold;
+}
+
+.glass {
+  @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+}
+
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-teal-500;
+}
+
+.btn-primary {
+  @apply px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold shadow-lg shadow-blue-500/30 hover:bg-blue-700 hover:shadow-blue-500/40 transition-all active:scale-95 cursor-pointer;
+}
+
+.btn-secondary {
+  @apply px-6 py-3 bg-white text-blue-600 border border-blue-100 rounded-xl font-semibold shadow-sm hover:bg-blue-50 transition-all active:scale-95 cursor-pointer;
+}
