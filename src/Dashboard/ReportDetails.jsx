@@ -55,54 +55,134 @@ function ReportDetail() {
     if (!report) return;
     const doc = new jsPDF();
     const data = report.structuredData || {};
+    const getVal = (val) => val || "-";
 
-    // Header
-    doc.setFontSize(22);
-    doc.setTextColor(37, 99, 235);
-    doc.text("MediAI Diagnostic", 105, 20, { align: "center" });
+    // 1. Header
+    doc.setFontSize(20);
+    doc.setTextColor(30, 64, 175);
+    doc.text(getVal(data.report_type) || "Medical Report Analysis", 105, 20, null, null, "center");
 
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`ID: ${report._id} | Date: ${new Date(report.reportDate).toLocaleDateString()}`, 105, 27, { align: "center" });
+    doc.text(`Generated for ${report.userId?.name || "Patient"} | ${new Date(report.reportDate).toLocaleDateString()}`, 105, 28, null, null, "center");
 
     doc.setDrawColor(200);
     doc.line(15, 35, 195, 35);
 
-    // Summary Section
-    doc.setFontSize(14);
-    doc.setTextColor(30, 64, 175);
-    doc.text("Report Summary", 15, 45);
-    doc.setFontSize(11);
+    let finalY = 45;
+
+    // 2. Patient & Report Details
+    doc.setFontSize(12);
     doc.setTextColor(0);
-    const splitSummary = doc.splitTextToSize(data.summary || report.aiSummary || "-", 180);
-    doc.text(splitSummary, 15, 52);
+    doc.text("Patient Details", 15, finalY);
+    doc.text("Report Details", 110, finalY);
 
-    let nextY = 75;
+    doc.setFontSize(9);
+    doc.setTextColor(80);
 
-    // Key Findings Table
-    if (data.keyFindings && data.keyFindings.length > 0) {
+    const pInfo = data.patient_information || {};
+    doc.text(`Name: ${getVal(pInfo.name)}`, 15, finalY + 6);
+    doc.text(`Age/Sex: ${getVal(pInfo.age)} / ${getVal(pInfo.sex)}`, 15, finalY + 11);
+    doc.text(`Ref By: ${getVal(pInfo.referred_by)}`, 15, finalY + 16);
+
+    const rInfo = data.report_details || {};
+    doc.text(`Lab: ${getVal(rInfo.lab_name)}`, 110, finalY + 6);
+    doc.text(`Collected: ${getVal(rInfo.collected_on)}`, 110, finalY + 11);
+    doc.text(`Reported: ${getVal(rInfo.reported_on)}`, 110, finalY + 16);
+
+    finalY += 25;
+
+    // 3. Test Results Table
+    if (data.test_results && data.test_results.length > 0) {
+      doc.setFontSize(12);
+      doc.setTextColor(30, 64, 175);
+      doc.text("Test Results", 15, finalY);
+
       autoTable(doc, {
-        startY: nextY,
-        head: [['Test', 'Value', 'Status']],
-        body: data.keyFindings.map(f => [f.test, f.value, f.status]),
+        startY: finalY + 5,
+        head: [['Test Name', 'Value', 'Unit', 'Ref. Range', 'Status']],
+        body: data.test_results.map(t => [t.test_name, t.value, t.unit, t.reference_range, t.status]),
         theme: 'striped',
         headStyles: { fillColor: [37, 99, 235] },
+        styles: { fontSize: 8 }
       });
-      nextY = doc.lastAutoTable.finalY + 15;
+      finalY = doc.lastAutoTable.finalY + 15;
     }
 
-    // Medicine Suggestions
-    if (data.medicineSuggestions && data.medicineSuggestions.length > 0) {
-      doc.setFontSize(14);
-      doc.setTextColor(30, 64, 175);
-      doc.text("Suggested Medicines", 15, nextY);
+    // 4. Interpretation Summary
+    if (data.interpretation_summary) {
+      if (finalY > 250) { doc.addPage(); finalY = 20; }
 
+      doc.setFontSize(12);
+      doc.setTextColor(30, 64, 175);
+      doc.text("Interpretation & Analysis", 15, finalY);
+      finalY += 8;
+
+      doc.setFontSize(10);
+      doc.setTextColor(0);
+      doc.text(`Overall Status: ${getVal(data.interpretation_summary.overall_status)}`, 15, finalY);
+      finalY += 8;
+
+      const abnormalities = data.interpretation_summary.abnormal_findings || [];
+      if (abnormalities.length > 0) {
+        doc.setFontSize(9);
+        doc.setTextColor(220, 38, 38);
+        doc.text("Abnormal Findings:", 15, finalY);
+        finalY += 5;
+
+        abnormalities.forEach(ab => {
+          const line = `• ${ab.parameter}: ${ab.clinical_significance}`;
+          const splitLine = doc.splitTextToSize(line, 180);
+          doc.text(splitLine, 20, finalY);
+          finalY += (splitLine.length * 5);
+        });
+        finalY += 5;
+      }
+    }
+
+    // 5. Pathologist Analysis
+    const analysis = data.diagnostic_pathologist_analysis;
+    if (analysis) {
+      if (finalY > 240) { doc.addPage(); finalY = 20; }
+      doc.setFontSize(12);
+      doc.setTextColor(30, 64, 175);
+      doc.text("Pathologist Analysis", 15, finalY);
+      finalY += 8;
+      doc.setFontSize(9);
+      doc.setTextColor(0);
+
+      const addSection = (title, items) => {
+        if (items && items.length > 0) {
+          doc.setFont(undefined, 'bold');
+          doc.text(title, 15, finalY);
+          doc.setFont(undefined, 'normal');
+          finalY += 5;
+          items.forEach(item => {
+            const splitItem = doc.splitTextToSize(`• ${item}`, 175);
+            doc.text(splitItem, 20, finalY);
+            finalY += (splitItem.length * 4) + 2;
+          });
+          finalY += 3;
+        }
+      };
+
+      addSection("Key Findings:", analysis.key_findings);
+      addSection("Recommendations:", analysis.recommendations);
+    }
+
+    // 6. Medicine Suggestions
+    if (data.medicineSuggestions && data.medicineSuggestions.length > 0) {
+      if (finalY > 240) { doc.addPage(); finalY = 20; }
+      doc.setFontSize(12);
+      doc.setTextColor(30, 64, 175);
+      doc.text("Suggested Medicines", 15, finalY);
       autoTable(doc, {
-        startY: nextY + 5,
+        startY: finalY + 5,
         head: [['Medicine', 'Formula', 'Purpose']],
         body: data.medicineSuggestions.map(m => [m.name, m.formula, m.purpose]),
         theme: 'grid',
         headStyles: { fillColor: [16, 185, 129] },
+        styles: { fontSize: 8 }
       });
     }
 
@@ -122,19 +202,9 @@ function ReportDetail() {
 
   const data = report.structuredData || {};
 
-  // Prepare Chart Data
-  const chartData = (data.keyFindings || [])
-    .filter(f => f.numericValue && !isNaN(f.numericValue))
-    .map(f => ({
-      name: f.test.length > 15 ? f.test.substring(0, 15) + '...' : f.test,
-      fullName: f.test,
-      value: f.numericValue,
-      status: f.status
-    }));
-
   return (
     <div className="min-h-screen bg-slate-50 pt-28 pb-12 px-4 md:px-8">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-6xl mx-auto">
 
         {/* Navigation & Actions */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -156,226 +226,222 @@ function ReportDetail() {
           </button>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-
-          {/* Main Info Column */}
-          <div className="lg:col-span-2 space-y-8">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-[2.5rem] shadow-xl p-8 border border-slate-100 relative overflow-hidden"
-            >
-              <div className="flex items-center gap-4 mb-6 relative z-10">
-                <div className="p-4 bg-blue-600 rounded-3xl text-white shadow-lg shadow-blue-100">
-                  <FileText size={28} />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-black text-slate-800">{report.reportType}</h1>
-                  <p className="text-sm font-bold text-slate-400 capitalize">
-                    Reported on {new Date(report.reportDate).toLocaleDateString(undefined, { dateStyle: 'long' })}
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 relative z-10">
-                <div className="flex items-center gap-2 text-blue-600 font-bold mb-3">
-                  <CheckCircle size={18} />
-                  AI Clinical Summary
-                </div>
-                <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">
-                  {data.summary || report.aiSummary}
+        <div className="space-y-6">
+          {/* 1. Header Card with Patient & Report Info */}
+          <div className="bg-white rounded-3xl shadow-lg p-6 border border-slate-100">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h2 className="text-2xl font-black text-slate-800 mb-1">
+                  {data.report_type || report.reportType}
+                </h2>
+                <p className="text-sm text-slate-500 font-medium">
+                  Reported on {new Date(report.reportDate).toLocaleDateString()}
                 </p>
               </div>
+            </div>
 
-              {/* Decorative Blur */}
-              <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-blue-50 rounded-full blur-3xl opacity-50"></div>
-            </motion.div>
+            <div className="grid md:grid-cols-2 gap-4 bg-slate-50 rounded-2xl p-5 border border-slate-100">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  <CheckCircle size={14} /> Patient Details
+                </div>
+                <div className="grid grid-cols-2 gap-y-1 gap-x-4 text-sm">
+                  <span className="text-slate-500">Name:</span>
+                  <span className="font-bold text-slate-800 text-right">{data.patient_information?.name || "-"}</span>
 
-            {/* AI Visualization / Chart */}
-            {chartData.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="bg-white rounded-[2.5rem] shadow-xl p-8 border border-slate-100"
-              >
-                <div className="flex items-center gap-2 text-indigo-600 font-bold mb-8">
-                  <TrendingUp size={20} />
-                  Visual Diagnosis Markers
+                  <span className="text-slate-500">Age / Sex:</span>
+                  <span className="font-bold text-slate-800 text-right">
+                    {data.patient_information?.age || "-"} / {data.patient_information?.sex || "-"}
+                  </span>
+
+                  <span className="text-slate-500">Ref. By:</span>
+                  <span className="font-bold text-slate-800 text-right">{data.patient_information?.referred_by || "-"}</span>
+                </div>
+              </div>
+              <div className="space-y-2 md:border-l md:border-slate-200 md:pl-4">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  <BriefcaseMedical size={14} /> Report Details
+                </div>
+                <div className="grid grid-cols-2 gap-y-1 gap-x-4 text-sm">
+                  <span className="text-slate-500">Lab Name:</span>
+                  <span className="font-bold text-slate-800 text-right truncate">{data.report_details?.lab_name || "-"}</span>
+
+                  <span className="text-slate-500">Collected:</span>
+                  <span className="font-bold text-slate-800 text-right">{data.report_details?.collected_on || "-"}</span>
+
+                  <span className="text-slate-500">Reported:</span>
+                  <span className="font-bold text-slate-800 text-right">{data.report_details?.reported_on || "-"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Visual Graphs */}
+          {(data.test_results || [])
+            .filter(r => r.numeric_value !== null && r.numeric_value !== undefined).length > 0 && (
+              <div className="bg-white rounded-3xl shadow-lg p-6 border border-slate-100">
+                <div className="flex items-center gap-2 text-indigo-600 font-bold mb-6">
+                  <TrendingUp size={18} /> Visual Trends
                 </div>
                 <div className="h-[250px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData}>
+                    <BarChart data={data.test_results.filter(r => r.numeric_value !== null)}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                       <XAxis
-                        dataKey="name"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
-                        dy={10}
+                        dataKey="test_name"
+                        tick={{ fontSize: 9, fill: '#64748b' }}
+                        interval={0}
+                        tickFormatter={(val) => val.length > 10 ? val.substring(0, 8) + '...' : val}
                       />
-                      <YAxis hide domain={[0, 'auto']} />
+                      <YAxis hide />
                       <Tooltip
                         cursor={{ fill: '#f8fafc' }}
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length) {
-                            const d = payload[0].payload;
-                            return (
-                              <div className="bg-white p-4 rounded-2xl shadow-2xl border border-slate-100">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{d.fullName}</p>
-                                <p className="text-lg font-black text-slate-800">{d.value}</p>
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${d.status?.toLowerCase().includes('high') ? 'bg-red-50 text-red-600' :
-                                    d.status?.toLowerCase().includes('low') ? 'bg-orange-50 text-orange-600' :
-                                      'bg-green-50 text-green-600'
-                                  }`}>
-                                  {d.status}
-                                </span>
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                       />
-                      <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={40}>
-                        {chartData.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={
-                              entry.status?.toLowerCase().includes('high') ? '#ef4444' :
-                                entry.status?.toLowerCase().includes('low') ? '#f97316' :
-                                  '#3b82f6'
-                            }
-                          />
+                      <Bar dataKey="numeric_value" radius={[4, 4, 0, 0]}>
+                        {data.test_results.filter(r => r.numeric_value !== null).map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={
+                            entry.status?.toLowerCase().includes('high') ? '#ef4444' :
+                              entry.status?.toLowerCase().includes('low') ? '#f97316' : '#3b82f6'
+                          } />
                         ))}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-              </motion.div>
+              </div>
             )}
 
-            {/* Findings Table */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white rounded-[2.5rem] shadow-xl overflow-hidden border border-slate-100"
-            >
-              <div className="p-8 pb-0">
-                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <Target size={20} className="text-indigo-600" /> Key Lab Findings
-                </h3>
-              </div>
-
-              <div className="overflow-x-auto p-8 pt-6">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-50 text-slate-400">
-                      <th className="py-4 text-left font-bold uppercase tracking-wider text-[10px]">Parameter</th>
-                      <th className="py-4 text-left font-bold uppercase tracking-wider text-[10px]">Measured Value</th>
-                      <th className="py-4 text-right font-bold uppercase tracking-wider text-[10px]">Clinical Status</th>
+          {/* 3. Detailed Test Results Table */}
+          <div className="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden">
+            <div className="p-6 pb-4 border-b border-slate-50">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <FileText size={18} className="text-blue-500" /> Test Results
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-slate-50 text-slate-500 font-bold text-xs uppercase tracking-wider">
+                  <tr>
+                    <th className="px-6 py-3">Test Name</th>
+                    <th className="px-6 py-3">Value</th>
+                    <th className="px-6 py-3">Reference Range</th>
+                    <th className="px-6 py-3 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {(data.test_results || []).map((test, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4 font-bold text-slate-700">{test.test_name}</td>
+                      <td className="px-6 py-4">
+                        <span className="font-bold text-slate-800">{test.value}</span>
+                        <span className="text-xs text-slate-400 ml-1">{test.unit}</span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-500 text-xs">{test.reference_range}</td>
+                      <td className="px-6 py-4 text-right">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold capitalize
+                                    ${test.status?.toLowerCase().includes('high') ? 'bg-red-50 text-red-600' :
+                            test.status?.toLowerCase().includes('low') ? 'bg-orange-50 text-orange-600' :
+                              'bg-green-50 text-green-600'}`}>
+                          {test.status}
+                        </span>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {(data.keyFindings || []).length > 0 ? (
-                      data.keyFindings.map((finding, idx) => (
-                        <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
-                          <td className="py-4 font-bold text-slate-700">{finding.test}</td>
-                          <td className="py-4 text-slate-600 font-medium">{finding.value}</td>
-                          <td className="py-4 text-right">
-                            <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black tracking-widest uppercase ${finding.status?.toLowerCase().includes('high') ? 'bg-red-50 text-red-600 border border-red-100' :
-                              finding.status?.toLowerCase().includes('low') ? 'bg-orange-50 text-orange-600 border border-orange-100' :
-                                'bg-green-50 text-green-600 border border-green-100'
-                              }`}>
-                              {finding.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr><td colSpan="3" className="py-8 text-center text-slate-400 italic font-medium text-xs">No specific findings parsed for this report.</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          {/* Side Column: Medicines & Actions */}
-          <div className="space-y-8">
+          {/* 4. Professional Insight / Pathologist Analysis */}
+          <div className="grid md:grid-cols-2 gap-6">
 
-            {/* Recommendations Card */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-[2.5rem] shadow-xl p-8 border border-white/10 text-white relative overflow-hidden"
-            >
-              <div className="relative z-10">
-                <div className="flex items-center gap-2 font-bold mb-4 bg-white/20 w-fit px-4 py-1.5 rounded-full text-xs">
-                  <Bot size={16} /> MediAI Insights
+            {/* Interpretation Summary */}
+            <div className="bg-white rounded-3xl shadow-lg p-6 border border-slate-100">
+              <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <Bot size={18} className="text-purple-500" /> Interpretation
+              </h3>
+
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-purple-50 border border-purple-100">
+                  <p className="text-xs font-bold text-purple-400 uppercase tracking-wider mb-1">Overall Status</p>
+                  <p className="font-bold text-purple-900 text-lg">
+                    {data.interpretation_summary?.overall_status || "Pending Review"}
+                  </p>
                 </div>
-                <h3 className="text-xl font-black mb-4 leading-tight">Professional Recommendations</h3>
 
-                {data.recommendations && Array.isArray(data.recommendations) ? (
-                  <ul className="space-y-3 mb-6">
-                    {data.recommendations.map((rec, i) => (
-                      <li key={i} className="text-sm text-indigo-50 leading-relaxed flex items-start gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-300 mt-1.5 shrink-0" />
-                        {rec}
-                      </li>
+                {(data.interpretation_summary?.abnormal_findings || []).length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Abnormal Findings</p>
+                    {data.interpretation_summary.abnormal_findings.map((item, i) => (
+                      <div key={i} className="flex gap-3 items-start p-3 bg-red-50 rounded-xl border border-red-100">
+                        <AlertTriangle size={16} className="text-red-500 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="font-bold text-red-700 text-xs">{item.parameter} ({item.value})</p>
+                          <p className="text-red-600/80 text-xs leading-snug">{item.clinical_significance}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Pathologist Notes */}
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl shadow-lg p-6 text-white">
+              <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+                <BriefcaseMedical size={18} className="text-blue-400" /> Pathologist Analysis
+              </h3>
+
+              <div className="space-y-4 text-sm text-slate-300">
+                <div>
+                  <p className="font-bold text-slate-400 text-xs uppercase mb-2">Key Findings</p>
+                  <ul className="list-disc pl-4 space-y-1">
+                    {(data.diagnostic_pathologist_analysis?.key_findings || []).map((f, i) => (
+                      <li key={i}>{f}</li>
                     ))}
                   </ul>
-                ) : (
-                  <p className="text-sm text-indigo-100 leading-relaxed mb-6 font-medium">
-                    {data.recommendations || "Routine follow-up suggested."}
-                  </p>
-                )}
-
-                <div className="pt-6 border-t border-white/10 flex items-start gap-3">
-                  <AlertTriangle size={18} className="text-orange-300 shrink-0" />
-                  <p className="text-[10px] text-white/60 leading-relaxed italic">
-                    AI analysis is for informational purposes. Mandatory physician consultation required for diagnosis.
-                  </p>
                 </div>
-              </div>
-              <div className="absolute top-0 right-0 -mr-12 -mt-12 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
-            </motion.div>
 
-            {/* Medicine Suggestions */}
-            {(data.medicineSuggestions || []).length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-                className="bg-white rounded-[2.5rem] shadow-xl p-8 border border-slate-100"
-              >
-                <div className="flex items-center gap-2 text-emerald-600 font-bold mb-6">
-                  <div className="p-2 bg-emerald-50 rounded-xl">
-                    <Pill size={20} />
+                {(data.diagnostic_pathologist_analysis?.recommendations || []).length > 0 && (
+                  <div className="pt-4 border-t border-slate-700">
+                    <p className="font-bold text-slate-400 text-xs uppercase mb-2">Recommendations</p>
+                    <ul className="list-disc pl-4 space-y-1 text-blue-200">
+                      {data.diagnostic_pathologist_analysis.recommendations.map((r, i) => (
+                        <li key={i}>{r}</li>
+                      ))}
+                    </ul>
                   </div>
-                  Regional Medicine
-                </div>
-                <div className="space-y-4">
-                  {data.medicineSuggestions.map((med, idx) => (
-                    <div key={idx} className="p-5 bg-emerald-50 rounded-[2rem] border border-emerald-100 group hover:bg-emerald-100/50 transition-all">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h4 className="font-black text-slate-800 text-sm">{med.name}</h4>
-                          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mt-0.5">{med.formula}</p>
-                        </div>
-                        {med.link && (
-                          <a href={med.link} target="_blank" rel="noopener noreferrer" className="p-2 bg-white rounded-xl text-emerald-500 hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
-                            <ExternalLink size={14} />
-                          </a>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-600 leading-relaxed font-medium">{med.purpose}</p>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
+                )}
+              </div>
+            </div>
           </div>
+
+          {/* 5. Medicine Suggestions */}
+          {(data.medicineSuggestions || []).length > 0 && (
+            <div className="bg-emerald-50 rounded-3xl p-6 border border-emerald-100">
+              <h3 className="font-bold text-emerald-800 mb-4 flex items-center gap-2">
+                <Pill size={18} /> Regional Medicine Suggestions
+              </h3>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {data.medicineSuggestions.map((med, i) => (
+                  <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-emerald-100/50">
+                    <div className="flex justify-between items-start">
+                      <h4 className="font-bold text-slate-800">{med.name}</h4>
+                      {med.link && <a href={med.link} target="_blank" className="text-emerald-500 hover:text-emerald-700"><ExternalLink size={14} /></a>}
+                    </div>
+                    <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">{med.formula}</p>
+                    <p className="text-xs text-slate-500 leading-relaxed">{med.purpose}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <p className="text-[10px] text-center text-slate-400 italic">
+            Disclaimer: This analysis is generated by AI and is not a substitute for professional medical advice.
+            Always consult with a qualified healthcare provider.
+          </p>
 
         </div>
       </div>

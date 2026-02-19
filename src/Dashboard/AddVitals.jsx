@@ -74,7 +74,7 @@ function AddVitals() {
 
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`Generated for ${user?.name} | Date: ${new Date().toLocaleDateString()}`, 105, 27, { align: "center" });
+    doc.text(`Generated for ${user?.name || "Patient"} | Date: ${new Date().toLocaleDateString()}`, 105, 27, { align: "center" });
 
     doc.setDrawColor(200);
     doc.line(15, 35, 195, 35);
@@ -90,7 +90,7 @@ function AddVitals() {
 
     // Vitals Table
     autoTable(doc, {
-      startY: 70,
+      startY: 75,
       head: [['Vital Metric', 'Recorded Value']],
       body: [
         ['Blood Pressure', form.bp],
@@ -122,11 +122,17 @@ function AddVitals() {
     doc.save(`MediAI_Vitals_${new Date().getTime()}.pdf`);
   };
 
+  const data = vitalsResult?.structuredData || {};
+
   // Prepare Chart Data
-  const chartData = vitalsResult?.structuredData?.keyFindings || [
-    { test: 'Sugar', numericValue: parseFloat(form.sugar) || 0, status: 'Input' },
-    { test: 'Weight', numericValue: parseFloat(form.weight) || 0, status: 'Input' }
-  ];
+  const chartData = (data.keyFindings || [])
+    .filter(f => f.numericValue && !isNaN(f.numericValue))
+    .map(f => ({
+      name: f.test,
+      value: f.numericValue,
+      status: f.status,
+      unit: f.unit
+    }));
 
   return (
     <div className="min-h-screen bg-slate-50 pt-28 pb-12 px-4 md:px-8">
@@ -271,70 +277,74 @@ function AddVitals() {
                       </button>
                     </div>
                     <p className="text-slate-700 text-sm leading-relaxed font-medium relative z-10">
-                      {vitalsResult.structuredData?.summary || vitalsResult.aiResult}
+                      {data.summary || vitalsResult.aiResult}
                     </p>
                   </div>
 
                   {/* Vitals Chart */}
-                  <div className="bg-white rounded-[2.5rem] shadow-xl p-8 border border-slate-100">
-                    <div className="flex items-center gap-2 text-indigo-600 font-black uppercase tracking-widest text-[10px] mb-8">
-                      <Activity size={18} /> Vitals Visualization
-                    </div>
-                    <div className="h-[200px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData.map(f => ({
-                          name: f.test,
-                          value: f.numericValue,
-                          status: f.status
-                        }))}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                          <XAxis
-                            dataKey="name"
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
-                          />
-                          <YAxis hide domain={[0, 'auto']} />
-                          <Tooltip
-                            cursor={{ fill: '#f8fafc' }}
-                            content={({ active, payload }) => {
-                              if (active && payload && payload.length) {
-                                const d = payload[0].payload;
-                                return (
-                                  <div className="bg-white p-4 rounded-2xl shadow-2xl border border-slate-100">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{d.name}</p>
-                                    <p className="text-lg font-black text-slate-800">{d.value}</p>
-                                  </div>
-                                );
-                              }
-                              return null;
-                            }}
-                          />
-                          <Bar dataKey="value" radius={[10, 10, 0, 0]} barSize={40}>
-                            {chartData.map((entry, index) => (
-                              <Cell
-                                key={`cell-${index}`}
-                                fill={
-                                  entry.status?.toLowerCase().includes('high') ? '#ef4444' :
-                                    entry.status?.toLowerCase().includes('low') || entry.status === 'Elevated' ? '#f97316' :
-                                      '#3b82f6'
+                  {chartData.length > 0 && (
+                    <div className="bg-white rounded-[2.5rem] shadow-xl p-8 border border-slate-100">
+                      <div className="flex items-center gap-2 text-indigo-600 font-black uppercase tracking-widest text-[10px] mb-8">
+                        <Activity size={18} /> Vitals Visualization
+                      </div>
+                      <div className="h-[200px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                            <XAxis
+                              dataKey="name"
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
+                            />
+                            <YAxis hide domain={[0, 'auto']} />
+                            <Tooltip
+                              cursor={{ fill: '#f8fafc' }}
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  const d = payload[0].payload;
+                                  return (
+                                    <div className="bg-white p-4 rounded-2xl shadow-2xl border border-slate-100">
+                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{d.name}</p>
+                                      <p className="text-lg font-black text-slate-800">{d.value} <span className="text-xs text-slate-400 font-normal">{d.unit}</span></p>
+                                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${d.status?.toLowerCase().includes('high') ? 'bg-red-50 text-red-600' :
+                                          d.status?.toLowerCase().includes('low') ? 'bg-orange-50 text-orange-600' :
+                                            'bg-green-50 text-green-600'
+                                        }`}>
+                                        {d.status}
+                                      </span>
+                                    </div>
+                                  );
                                 }
-                              />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
+                                return null;
+                              }}
+                            />
+                            <Bar dataKey="value" radius={[10, 10, 0, 0]} barSize={40}>
+                              {chartData.map((entry, index) => (
+                                <Cell
+                                  key={`cell-${index}`}
+                                  fill={
+                                    entry.status?.toLowerCase().includes('high') ? '#ef4444' :
+                                      entry.status?.toLowerCase().includes('low') || entry.status === 'Elevated' ? '#f97316' :
+                                        '#3b82f6'
+                                  }
+                                />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Localized Medicines */}
-                  {vitalsResult.structuredData?.medicineSuggestions?.length > 0 && (
+                  {data.medicineSuggestions?.length > 0 && (
                     <div className="bg-white rounded-[2.5rem] shadow-xl p-8 border border-slate-100">
                       <div className="flex items-center gap-2 text-emerald-600 font-black uppercase tracking-widest text-[10px] mb-6">
                         <Pill size={18} /> Preferred Support ({user?.country})
                       </div>
                       <div className="grid gap-3">
-                        {vitalsResult.structuredData.medicineSuggestions.map((med, idx) => (
+                        {data.medicineSuggestions.map((med, idx) => (
                           <div key={idx} className="p-5 bg-emerald-50 rounded-3xl border border-emerald-100 group hover:bg-emerald-200/30 transition-all">
                             <div className="flex justify-between items-start mb-2">
                               <div>
@@ -361,9 +371,9 @@ function AddVitals() {
                         <Activity size={16} className="text-blue-400" /> Clinical Recommendations
                       </div>
 
-                      {vitalsResult.structuredData?.recommendations && Array.isArray(vitalsResult.structuredData.recommendations) ? (
+                      {data.recommendations && Array.isArray(data.recommendations) ? (
                         <ul className="space-y-4 mb-8">
-                          {vitalsResult.structuredData.recommendations.map((rec, i) => (
+                          {data.recommendations.map((rec, i) => (
                             <li key={i} className="text-xs text-slate-300 leading-relaxed flex items-start gap-3">
                               <CheckCircle size={16} className="text-blue-500 shrink-0" />
                               {rec}

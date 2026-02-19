@@ -3,16 +3,12 @@ import { Link } from "react-router-dom";
 import {
   Activity,
   FileText,
-  Calendar,
-  ChevronRight,
   Clock,
+  ChevronRight,
   ChevronLeft,
-  Search,
-  ArrowUpRight,
-  TrendingUp,
   History
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { API } from "../api";
 
@@ -24,6 +20,20 @@ function Timeline() {
   useEffect(() => {
     fetchTimeline();
   }, []);
+
+  const getCleanSummary = (text) => {
+    if (!text) return "Diagnostic report processed.";
+    try {
+      // Try parsing if it looks like JSON
+      if (text.trim().startsWith("{") || text.trim().startsWith("[")) {
+        const parsed = JSON.parse(text);
+        return parsed.summary || parsed.interpretation_summary?.overall_status || "Diagnostic report processed.";
+      }
+    } catch (e) {
+      // Not JSON, return as is
+    }
+    return text.substring(0, 120) + (text.length > 120 ? "..." : "");
+  };
 
   const fetchTimeline = async () => {
     setLoading(true);
@@ -51,7 +61,7 @@ function Timeline() {
         date: new Date(r.reportDate),
         type: "Report",
         title: r.reportType || "Lab Analysis",
-        text: r.aiSummary ? (r.aiSummary.substring(0, 120) + "...") : "Diagnostic report processed.",
+        text: getCleanSummary(r.aiSummary), // Clean up summary
         severity: r.structuredData?.severity || "Normal",
         report: r
       }));
@@ -71,14 +81,6 @@ function Timeline() {
   const filteredTimeline = timeline.filter(item =>
     filter === "All" || item.type === filter
   );
-
-  const getTypeStyles = (type) => {
-    switch (type) {
-      case "Vitals": return "bg-blue-50 text-blue-600 border-blue-100 p-3 rounded-2xl";
-      case "Report": return "bg-emerald-50 text-emerald-600 border-emerald-100 p-3 rounded-2xl";
-      default: return "bg-slate-50 text-slate-600 border-slate-100 p-3 rounded-2xl";
-    }
-  };
 
   const getSeverityBadge = (severity) => {
     const s = severity?.toLowerCase();
@@ -112,8 +114,8 @@ function Timeline() {
                 key={tab}
                 onClick={() => setFilter(tab)}
                 className={`px-6 py-2.5 rounded-[1rem] text-xs font-black transition-all uppercase tracking-widest ${filter === tab
-                    ? "bg-slate-900 text-white shadow-lg"
-                    : "text-slate-400 hover:text-slate-600"
+                  ? "bg-slate-900 text-white shadow-lg"
+                  : "text-slate-400 hover:text-slate-600"
                   }`}
               >
                 {tab === "All" ? "Full History" : tab === "Report" ? "Lab Reports" : "Vitals Trace"}
@@ -187,7 +189,7 @@ function Timeline() {
                   {/* Right Side (Card) */}
                   <div className="flex-1 w-full pl-14 md:pl-0">
                     <Link
-                      to={item.type === "Report" ? `/report/${item.id}` : "/add-vitals"}
+                      to={item.type === "Report" ? `/reports/${item.id}` : "/advitals"}
                       className="block group"
                     >
                       <motion.div
